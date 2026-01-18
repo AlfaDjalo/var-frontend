@@ -1,24 +1,61 @@
 import React, { useEffect, useState } from "react";
+import { FileSelect } from "./FileSelect";
+import PositionsTable from "./PositionsTable";
 
 function App() {
-  // const [backendStatus, setBackendStatus] = useState("Loading...");
+  const [selectedFile, setSelectedFile] = useState(null);
   const [varResult, setVarResult] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [assets, setAssets] = useState([]);
+  const [positions, setPositions] = useState({});
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-  // const API_BASE_URL = "https://var-backend-uyyz.onrender.com";
-  // const API_BASE_URL = "http://127.0.0.1:8000";
+
+  useEffect(() => {
+    if (!selectedFile) return;
+
+    fetch(`${API_BASE_URL}/var-covar/inspect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataset_name: selectedFile.name }),
+    })
+      .then(res => res.json())
+      .then(data => {
+        setAssets(data.assets);
+
+        // default $100 each
+        const initialPositions = {};
+        data.assets.forEach(a => {
+          initialPositions[a] = 100;
+        });
+        setPositions(initialPositions);
+      })
+      .catch(err => setError(err.message));
+  }, [selectedFile]);
+
+  const handleHoldingChange = (asset, value) => {
+    setPositions(prev => ({
+      ...prev,
+      [asset]: value
+    }));
+  };
 
   const calculateVaR = () => {
+    if (!selectedFile) {
+      setError("Please select a CSV file first.");
+      return
+    }
+
     setLoading(true);
     setError(null);
     setVarResult(null);
 
     const requestBody = {
-      dataset_name: "portfolio_prices_10.csv",
+      dataset_name: selectedFile.name,
       confidence_level: 0.01,
       cov_window_days: 252,
+      positions,
     };
 
     fetch(`${API_BASE_URL}/var-covar/calculate`, {
@@ -43,19 +80,28 @@ function App() {
     });
   };
 
-  // useEffect(() => {
-  //   // fetch("http://127.0.0.1:8000/health")
-  //   fetch("https://var-backend-uyyz.onrender.com/health")
-  //     .then((res) => res.json())
-  //     .then((data) => setBackendStatus(data.status))
-  //     .catch(() => setBackendStatus("Error connecting to backend"));
-  // }, []);
-
   return (
     <div style={{ padding: 20 }}>
       <h1>VaR Frontend</h1>
 
-      <button onClick={calculateVaR} disabled={loading}>
+      <FileSelect
+        selectedFile={selectedFile}
+        handleFileSelect={(file) => {
+          setSelectedFile(file);
+          setError(null);
+          setVarResult(null);
+        }}
+      />
+
+      {assets.length > 0 && (
+        <PositionsTable
+          assets={assets}
+          positions={positions}
+          onHoldingChange={handleHoldingChange}
+        />
+      )}
+
+      <button onClick={calculateVaR} disabled={loading || !selectedFile}>
         {loading ? "Calculating..." : "Calculated Variance-Covariance VaR"}
       </button>
 
@@ -68,36 +114,15 @@ function App() {
       {varResult && (
         <div style={{ marginTop: 20 }}>
           <h2>Results:</h2>
-          <p><strong>VaR:</strong> {(varResult.var * 100)?.toFixed(2) ?? "N/A"}%</p>
-          <p><strong>Portfolio Volatility:</strong> {(varResult.portfolio_volatility * 100)?.toFixed(2) ?? "N/A"}%</p>
-          <p><strong>Portfolio Mean Return:</strong> {(varResult.portfolio_mean_return * 100)?.toFixed(2) ?? "N/A"}%</p>
+          <p><strong>Portfolio Value ($):</strong> ${varResult.portfolio_value?.toFixed(2) ?? "N/A"}</p>
+          <p><strong>VaR ($):</strong> ${varResult.var_dollars?.toFixed(2) ?? "N/A"}</p>
+          <p><strong>VaR (%):</strong> {(varResult.var_percent * 100)?.toFixed(2) ?? "N/A"}%</p>
+          <p><strong>Volatility:</strong> {(varResult.volatility_percent * 100)?.toFixed(2) ?? "N/A"}%</p>
         </div>
       )}
 
-      {/* {varResult && (
-        <div style={{ marginTop: 20 }}>
-          <h2>Results:</h2>
-          <p>
-            <strong>VaR:</strong> {varResult.var.toFixed(6)}
-          </p>
-          <p>
-            <strong>Portfolio Volatility:</strong> {varResult.portfolio_volatility.toFixed(6)}
-          </p>
-          <p>
-            <strong>Portfolio Mean Return:</strong> {varResult.portfolio_mean_return.toFixed(6)}
-          </p>
-        </div>    
-      )} */}
     </div>
   );
 }
-
-//   return (
-//     <div>
-//       <h1>VaR Frontend</h1>
-//       <p>Backend status: {backendStatus}</p>
-//     </div>
-//   );
-// }
 
 export default App;
