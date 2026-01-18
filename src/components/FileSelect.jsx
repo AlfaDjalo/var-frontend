@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import './FileSelect.css';  // You can rename this file if you want
+import '../css/FileSelect.css';  // You can rename this file if you want
 
 export const FileSelect = ({ uploadedFileName, handleFileSelect }) => {
   const [selectedFile, setSelectedFile] = useState(uploadedFileName || null);

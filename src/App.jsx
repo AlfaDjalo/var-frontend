@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { FileSelect } from "./FileSelect";
-import PositionsTable from "./PositionsTable";
+import { FileSelect } from "./components/FileSelect";
+import PositionsTable from "./components/PositionsTable";
+import VaRSummary from "./components/VaRSummary";
+import CorrelationMatrix from "./components/CorrelationMatrix";
 
 function App() {
   const [selectedFile, setSelectedFile] = useState(null);
@@ -71,6 +73,7 @@ function App() {
     })
     .then((data) => {
       setVarResult(data);
+      console.log(data)
     })
     .catch((err) => {
       setError(err.message);
@@ -93,6 +96,7 @@ function App() {
         }}
       />
 
+
       {assets.length > 0 && (
         <PositionsTable
           assets={assets}
@@ -112,6 +116,32 @@ function App() {
       )}
 
       {varResult && (
+        <div
+          style={{
+            display: "flex",
+            gap: "24px",
+            alignItems: "flex-start",
+            marginTop: "24px",
+          }}
+        >
+          {/* Left: VaR numbers */}
+          <div style={{ flex: "0 0 300px" }}>
+            <VaRSummary
+              portfolioValue={varResult.portfolio_value}
+              varDollars={varResult.var_dollars}
+              varPercent={varResult.var_percent}
+              volatilityPercent={varResult.volatility_percent}
+            />
+          </div>
+
+          {/* Right: correlation matrix */}
+          <div style={{ flex: 1 }}>
+            <CorrelationMatrix corrMatrix={varResult.correlation_matrix} />
+          </div>
+        </div>
+      )}
+
+      {/* {varResult && (
         <div style={{ marginTop: 20 }}>
           <h2>Results:</h2>
           <p><strong>Portfolio Value ($):</strong> ${varResult.portfolio_value?.toFixed(2) ?? "N/A"}</p>
@@ -119,7 +149,7 @@ function App() {
           <p><strong>VaR (%):</strong> {(varResult.var_percent * 100)?.toFixed(2) ?? "N/A"}%</p>
           <p><strong>Volatility:</strong> {(varResult.volatility_percent * 100)?.toFixed(2) ?? "N/A"}%</p>
         </div>
-      )}
+      )} */}
 
     </div>
   );
