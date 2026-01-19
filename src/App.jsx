@@ -136,7 +136,7 @@ function App() {
 
           {/* Right: correlation matrix */}
           <div style={{ flex: 1 }}>
-            <CorrelationMatrix corrMatrix={varResult.correlation_matrix} />
+            <CorrelationMatrix corrMatrix={varResult.correlation_matrix} tickers={assets}/>
           </div>
         </div>
       )}
