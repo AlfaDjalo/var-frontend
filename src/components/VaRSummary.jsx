@@ -7,6 +7,19 @@ const VaRSummary = ({
   varPercent,
   volatilityPercent,
 }) => {
+  console.log(portfolioValue);
+  console.log(varDollars);
+  console.log(varPercent);
+  console.log(volatilityPercent);
+  if (
+    portfolioValue == null ||
+    varDollars == null ||
+    varPercent == null ||
+    volatilityPercent == null
+  ) {
+    return <div>No VaR results available.</div>;
+  }
+
   return (
     <div>
       <h3>VaR Summary</h3>

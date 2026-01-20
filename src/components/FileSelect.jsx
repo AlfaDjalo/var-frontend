@@ -1,107 +1,120 @@
-import React, { useState, useRef, useEffect } from 'react';
-import '../css/FileSelect.css';  // You can rename this file if you want
+import React, { useEffect, useRef, useState } from "react";
 
-export const FileSelect = ({ uploadedFileName, handleFileSelect }) => {
-  const [selectedFile, setSelectedFile] = useState(uploadedFileName || null);
-  const [errorMessage, setErrorMessage] = useState(null);
+const FileSelect = ({ apiBaseUrl, onDatasetLoaded }) => {
+  const [source, setSource] = useState("backend"); // "backend" | "local"
+  const [datasets, setDatasets] = useState([]);
+  const [selectedBackendFile, setSelectedBackendFile] = useState("");
+  const [localFileName, setLocalFileName] = useState("");
+
   const fileInputRef = useRef(null);
 
+  /* Load backend datasets */
   useEffect(() => {
-    if (uploadedFileName) {
-      setSelectedFile(uploadedFileName);
-    } 
-  }, [uploadedFileName]);
+    fetch(`${apiBaseUrl}/datasets`)
+      .then((res) => res.json())
+      .then((data) => setDatasets(data.files || []))
+      .catch(() => setDatasets([]));
+  }, [apiBaseUrl]);
 
-  // Validate the selected file
-  const validateFile = (file) => {
-    if (!file) {
-      return "Please select a file";
+  /* Backend dataset selected */
+  const onBackendChange = (e) => {
+    const filename = e.target.value;
+    setSelectedBackendFile(filename);
+    setLocalFileName("");
+    setSource("backend");
+
+    if (filename) {
+      onDatasetLoaded(filename);
     }
-
-    if (file.type !== 'text/csv' && !file.name.toLowerCase().endsWith('.csv')) {
-      return "Please select a CSV file";
-    }
-
-    const maxSize = 10 * 1024 * 1024; // 10MB
-    if (file.size > maxSize) {
-      return "File size must be less than 10MB";
-    }
-
-    return null;
   };
 
-  const onFileChange = (file) => {
-    const validationError = validateFile(file);
-    if (validationError) {
-      setErrorMessage(validationError);
-      setSelectedFile(null);
-      handleFileSelect(null);
+  /* Local upload */
+  const onChooseLocal = () => {
+    fileInputRef.current.click();
+  };
+
+  const onLocalPicked = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setSource("local");
+    setSelectedBackendFile("");
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const res = await fetch(`${apiBaseUrl}/datasets/upload`, {
+      method: "POST",
+      body: formData,
+    });
+
+    if (!res.ok) {
+      alert("Upload failed");
       return;
     }
 
-    setSelectedFile(file);
-    setErrorMessage(null);
-    handleFileSelect(file);
-  };
-
-  const handleFileChange = (event) => {
-    const file = event.target.files[0];
-    onFileChange(file);
-  };
-
-  const handleClear = () => {
-    setSelectedFile(null);
-    setErrorMessage(null);
-    handleFileSelect(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
-
-  const formatFileSize = (bytes) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    const data = await res.json();
+    setLocalFileName(file.name);
+    onDatasetLoaded(data.filename);
   };
 
   return (
-    <div className="data-upload">
-      <h2>Load Data</h2>
+    <div style={{ border: "1px solid #ccc", padding: 16, maxWidth: 500 }}>
+      <h3>Dataset selection</h3>
 
-      <p>Select a CSV file containing time series returns for your portfolio</p>
-
-      <div className="file-select">
+      {/* Backend datasets */}
+      <label>
         <input
-          type="file"
-          accept=".csv"
-          ref={fileInputRef}
-          onChange={handleFileChange}
-          style={{ display: 'none' }}
+          type="radio"
+          checked={source === "backend"}
+          onChange={() => setSource("backend")}
         />
+        Load sample dataset (server)
+      </label>
 
-        {!selectedFile ? (
-          <div
-            className="upload-area"
-            onClick={() => fileInputRef.current?.click()}
-            style={{ cursor: 'pointer', padding: 20, border: '2px dashed #ccc', borderRadius: 8, textAlign: 'center' }}
-          >
-            <p>Click or drag to select a CSV file</p>
-          </div>
-        ) : (
-          <div className="file-selected" style={{ position: 'relative', padding: 20, border: '1px solid #ccc', borderRadius: 8 }}>
-            <p>{selectedFile.name}</p>
-            <button 
-              onClick={handleClear} 
-              style={{ position: 'absolute', top: 8, right: 8, cursor: 'pointer' }}
-              aria-label="Clear selected file"
-            >
-             ✕
-            </button>
-          </div>
-        )}
+      <div style={{ marginLeft: 24, marginTop: 6 }}>
+        <select
+          disabled={source !== "backend"}
+          value={selectedBackendFile}
+          onChange={onBackendChange}
+        >
+          <option value="">Select dataset…</option>
+          {datasets.map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
+        </select>
       </div>
+
+      <hr />
+
+      {/* Local upload */}
+      <label>
+        <input
+          type="radio"
+          checked={source === "local"}
+          onChange={() => setSource("local")}
+        />
+        Upload local CSV
+      </label>
+
+      <div style={{ marginLeft: 24, marginTop: 6 }}>
+        <button onClick={onChooseLocal} disabled={source !== "local"}>
+          Choose file
+        </button>
+        <span style={{ marginLeft: 10, fontStyle: "italic" }}>
+          {localFileName || "No file selected"}
+        </span>
+      </div>
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept=".csv"
+        style={{ display: "none" }}
+        onChange={onLocalPicked}
+      />
     </div>
   );
 };
