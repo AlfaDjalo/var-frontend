@@ -7,7 +7,7 @@ const CorrelationMatrix = ({ corrMatrix, tickers }) => {
 
   return (
     <div>
-      <h3>Correlation Matrix</h3>
+      {/* <h3>Correlation Matrix</h3> */}
       <div style={{ overflowX: "auto" }}>
         <table style={{ borderCollapse: "collapse", fontSize: "0.85rem" }}>
           <thead>

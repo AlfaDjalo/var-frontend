@@ -14,8 +14,7 @@ const VaRSummary = ({
   if (
     portfolioValue == null ||
     varDollars == null ||
-    varPercent == null ||
-    volatilityPercent == null
+    varPercent == null
   ) {
     return <div>No VaR results available.</div>;
   }
@@ -26,7 +25,9 @@ const VaRSummary = ({
       <p><strong>Portfolio value:</strong> ${portfolioValue.toFixed(2)}</p>
       <p><strong>VaR ($):</strong> ${varDollars.toFixed(2)}</p>
       <p><strong>VaR (%):</strong> {(varPercent * 100).toFixed(2)}%</p>
-      <p><strong>Volatility (%):</strong> {(volatilityPercent * 100).toFixed(2)}%</p>
+      {volatilityPercent != null && (
+        <p><strong>Volatility (%):</strong> {(volatilityPercent * 100).toFixed(2)}%</p>
+      )}
     </div>
   );
 };

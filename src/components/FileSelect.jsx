@@ -16,16 +16,31 @@ const FileSelect = ({ apiBaseUrl, onDatasetLoaded }) => {
       .catch(() => setDatasets([]));
   }, [apiBaseUrl]);
 
+  /* When source changes, clear other source's selection & notify parent */
+  useEffect(() => {
+    if (source === "backend") {
+      setLocalFileName("");
+      if (selectedBackendFile) {
+        onDatasetLoaded(selectedBackendFile, "backend");
+      } else {
+        onDatasetLoaded(null);
+      }
+    } else {
+      setSelectedBackendFile("");
+      if (!localFileName) {
+        onDatasetLoaded(null);
+      }
+    }
+  }, [source]);
+
   /* Backend dataset selected */
   const onBackendChange = (e) => {
     const filename = e.target.value;
     setSelectedBackendFile(filename);
     setLocalFileName("");
     setSource("backend");
-
-    if (filename) {
-      onDatasetLoaded(filename);
-    }
+    onDatasetLoaded(filename, "backend");
+    // onDatasetLoaded(filename || null);
   };
 
   /* Local upload */
@@ -43,19 +58,26 @@ const FileSelect = ({ apiBaseUrl, onDatasetLoaded }) => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const res = await fetch(`${apiBaseUrl}/datasets/upload`, {
-      method: "POST",
-      body: formData,
-    });
+    try {
+      const res = await fetch(`${apiBaseUrl}/datasets/upload`, {
+        method: "POST",
+        body: formData,
+      });
 
-    if (!res.ok) {
-      alert("Upload failed");
-      return;
+      if (!res.ok) {
+        alert("Upload failed");
+        return;
+      }
+
+      const data = await res.json();
+      setLocalFileName(file.name);
+      onDatasetLoaded(data.filename, "local");
+    } catch {
+      alert("Upload failed due to network or server error");
+    } finally {
+      // Reset file input so the same file can be selected again
+      e.target.value = "";
     }
-
-    const data = await res.json();
-    setLocalFileName(file.name);
-    onDatasetLoaded(data.filename);
   };
 
   return (
