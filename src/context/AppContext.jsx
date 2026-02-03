@@ -34,7 +34,8 @@ function reducer(state, action) {
         ...state,
         assets: action.payload.assets,
         spotPrices: action.payload.spotPrices,
-        positions: action.payload.positions,
+        positions: {},
+        // positions: action.payload.positions,
       };
 
     case "SET_POSITIONS":
@@ -51,6 +52,28 @@ function reducer(state, action) {
 
     case "SET_LOADING":
       return { ...state, loading: action.payload };
+
+    case "ADD_POSITION": {
+      const { id, position } = action.payload;
+
+      return {
+        ...state,
+        positions: {
+          ...state.positions,
+          [id]: position,
+        },
+      };
+    }
+
+    case "DELETE_POSITION": {
+      const newPositions = { ...state.positions };
+      delete newPositions[action.payload];
+
+      return {
+        ...state,
+        positions: newPositions,
+      };
+    }
 
     case "SET_ERROR":
       return { ...state, error: action.payload };
