@@ -1,9 +1,12 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 
-export default function PortfolioPanel({ assets, spotPrices }) {
-  // Positions is an array of position objects (stock and option)
-  const [positions, setPositions] = useState([]);
-
+export default function PortfolioPanel({
+  assets,
+  spotPrices,
+  positions,
+  onAddPosition,
+  onDeletePosition,
+}) {
   // Inputs for add position
   const [addType, setAddType] = useState("stock");
   const [newTicker, setNewTicker] = useState("");
@@ -27,15 +30,14 @@ export default function PortfolioPanel({ assets, spotPrices }) {
       return;
     }
 
+    let position;
+
     if (addType === "stock") {
-      setPositions((prev) => [
-        ...prev,
-        {
-          product_type: "stock",
-          ticker: newTicker,
-          quantity: qty,
-        },
-      ]);
+      position = {
+        product_type: "stock",
+        ticker: newTicker,
+        quantity: qty,
+      };
     } else {
       if (
         !newStrike ||
@@ -46,28 +48,23 @@ export default function PortfolioPanel({ assets, spotPrices }) {
         alert("Please enter valid strike and maturity for option");
         return;
       }
-      setPositions((prev) => [
-        ...prev,
-        {
-          product_type: "option",
-          underlying: newTicker,
-          quantity: qty,
-          strike: parseFloat(newStrike),
-          option_type: newOptionType,
-          maturity: parseFloat(newMaturity),
-        },
-      ]);
+      position = {
+        product_type: "option",
+        underlying: newTicker,
+        quantity: qty,
+        strike: parseFloat(newStrike),
+        option_type: newOptionType,
+        maturity: parseFloat(newMaturity),
+      };
     }
+
+    onAddPosition(position);
 
     setNewTicker("");
     setNewQuantity("");
     setNewStrike("");
     setNewOptionType("call");
     setNewMaturity("");
-  };
-
-  const handleDeletePosition = (idx) => {
-    setPositions((prev) => prev.filter((_, i) => i !== idx));
   };
 
   return (
@@ -90,11 +87,12 @@ export default function PortfolioPanel({ assets, spotPrices }) {
             </tr>
           </thead>
           <tbody>
-            {positions.map((pos, idx) => {
-              const ticker = pos.product_type === "stock" ? pos.ticker : pos.underlying;
+            {positions.map((pos) => {
+              const ticker =
+                pos.product_type === "stock" ? pos.ticker : pos.underlying;
               const spot = spotPrices[ticker] || 0;
               return (
-                <tr key={idx}>
+                <tr key={pos.id}>
                   <td>{ticker}</td>
                   <td>{pos.product_type}</td>
                   <td>{pos.quantity}</td>
@@ -103,7 +101,7 @@ export default function PortfolioPanel({ assets, spotPrices }) {
                   <td>{pos.product_type === "option" ? pos.maturity : "—"}</td>
                   <td>{spot.toFixed(2)}</td>
                   <td>
-                    <button onClick={() => handleDeletePosition(idx)}>Delete</button>
+                    <button onClick={() => onDeletePosition(pos.id)}>Delete</button>
                   </td>
                 </tr>
               );
@@ -207,7 +205,9 @@ export default function PortfolioPanel({ assets, spotPrices }) {
         </>
       )}
 
-      <button onClick={handleAddPosition}>Add {addType === "stock" ? "Stock" : "Option"}</button>
+      <button onClick={handleAddPosition}>
+        Add {addType === "stock" ? "Stock" : "Option"}
+      </button>
     </div>
   );
 }
