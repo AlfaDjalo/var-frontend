@@ -1,21 +1,29 @@
-import React, { useEffect, useState } from "react";
-import FileSelect from "./components/FileSelect";
-import PositionsTable from "./components/PositionsTable";
-// import VaRSummary from "./components/VaRSummary";
-// import CorrelationMatrix from "./components/CorrelationMatrix";
-import VaRMethodSelect from "./components/VaRMethodSelect";
-import VaRConfigPanel from "./components/VaRConfigPanel";
-import VaRResultPanel from "./components/VaRResultPanel";
+import React, { useState, useEffect } from "react";
+import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
+
+import FileSelectPage from "./pages/FileSelectPage";
+import VaRSettingsPage from "./pages/VaRSettingsPage";
+import PortfolioPage from "./pages/PortfolioPage";
+import VaRResultPage from "./pages/VaRResultPage";
 
 function App() {
+  // Shared state for app (lifted up)
   const [datasetName, setDatasetName] = useState(null);
   const [datasetSource, setDatasetSource] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const [positions, setPositions] = useState({});
   const [assets, setAssets] = useState([]);
+  const [spotPrices, setSpotPrices] = useState({});
+  const [positions, setPositions] = useState({});
   const [varResult, setVarResult] = useState(null);
   const [varMethod, setVarMethod] = useState("parametric");
+  const [varConfig, setVarConfig] = useState({
+    confidenceLevel: 0.01,
+    covWindowDays: 252,
+    histDataWindowDays: 252,
+    parameterEstimationWindowDays: 252,
+  });
+  const [asofDate, setAsofDate] = useState("2026-01-25");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
@@ -25,18 +33,11 @@ function App() {
     montecarlo: "/montecarlo/calculate",
   };
 
-  const [varConfig, setVarConfig] = useState({
-    confidenceLevel: 0.01,
-    covWindowDays: 252,
-    histDataWindowDays: 252,
-  });
-
-  /* Inspect dataset when loaded or changed */
+  // Handle dataset loading effect (reset positions etc)
   useEffect(() => {
     if (!datasetName) return;
 
     fetch(`${API_BASE_URL}/parametric/inspect`, {
-    // fetch(`${API_BASE_URL}/var-covar/inspect`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ dataset_name: datasetName }),
@@ -47,15 +48,22 @@ function App() {
       })
       .then((data) => {
         setAssets(data.assets);
-        // Default all positions to 100 for each asset
-        setPositions(Object.fromEntries(data.assets.map((a) => [a, 100])));
-        setVarResult(null);  // Clear previous results on dataset change
+        setSpotPrices(data.spot_prices || {});
+        // Initialize positions: $100 default per asset
+        const initialPositions = {};
+        data.assets.forEach((asset) => {
+          const spot = data.spot_prices?.[asset] ?? 0;
+          const marketValue = 100;
+          const quantity = spot > 0 ? marketValue / spot : 0;
+          initialPositions[asset] = { quantity, marketValue };
+        });
+        setPositions(initialPositions);
+        setVarResult(null);
         setError(null);
       })
       .catch(() => setError("Failed to inspect dataset"));
   }, [datasetName]);
 
-  /* Calculate VaR based on current positions */
   const calculateVaR = () => {
     if (!datasetName) {
       setError("Please load a dataset first.");
@@ -65,105 +73,116 @@ function App() {
     setLoading(true);
     setError(null);
 
+    const productsArray = Object.entries(positions).map(([ticker, pos], index) => ({
+      product_id: `${ticker}_${index}`,
+      product_type: "stock",
+      ticker: ticker,
+      quantity: pos.quantity,
+    }));
+
+    const payload = {
+      dataset_name: datasetName,
+      confidence_level: varConfig.confidenceLevel,
+      estimation_window_days:
+        varMethod === "histsim"
+          ? varConfig.histDataWindowDays
+          : varMethod === "parametric"
+          ? varConfig.covWindowDays
+          : varConfig.parameterEstimationWindowDays,
+      asof_date: asofDate,
+      products: productsArray,
+    };
+
     fetch(`${API_BASE_URL}${endpointByMethod[varMethod]}`, {
-    // fetch(`${API_BASE_URL}/histsim/calculate`, {
-    // fetch(`${API_BASE_URL}/parametric/calculate`, {
-    // fetch(`${API_BASE_URL}/var-covar/calculate`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        dataset_name: datasetName,
-        confidence_level: varConfig.confidenceLevel,
-        positions,
-        ...(varMethod === "parametric" && { cov_window_days: varConfig.covWindowDays }),
-        ...(varMethod === "histsim" && { hist_data_window_days: varConfig.histDataWindowDays }),
-      }),
+      body: JSON.stringify(payload),
     })
       .then((res) => {
         if (!res.ok) throw new Error("VaR calculation failed");
         return res.json();
       })
       .then((data) => {
-        console.log(data)
         setVarResult({
           portfolioValue: data.portfolio_value,
-          varDollars: data.var_absolute,
+          varDollars: data.var_dollar || data.var_absolute,
           varPercent: data.var_percent,
           volatilityPercent: data.volatility_percent,
           correlation_matrix: data.correlation_matrix,
         });
-        setError(null);
       })
       .catch(() => setError("VaR calculation failed"))
       .finally(() => setLoading(false));
   };
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>VaR</h1>
+    <Router>
+      <div style={{ padding: 20 }}>
+        <h1>VaR App</h1>
+        <nav style={{ marginBottom: 20 }}>
+          <NavLink to="/" style={{ marginRight: 10 }}>
+            Load Data
+          </NavLink>
+          <NavLink to="/settings" style={{ marginRight: 10 }}>
+            VaR Settings
+          </NavLink>
+          <NavLink to="/portfolio" style={{ marginRight: 10 }}>
+            Portfolio
+          </NavLink>
+          <NavLink to="/results" style={{ marginRight: 10 }}>
+            VaR Results
+          </NavLink>
+        </nav>
 
-      <FileSelect
-        apiBaseUrl={API_BASE_URL}
-        onDatasetLoaded={(name, source) => {
-          setDatasetName(name);
-          setDatasetSource(source);
-        }}
-      />
-
-      {datasetName && datasetSource && (
-        <p>
-          Loaded dataset: <strong>{datasetName}</strong> (source: {datasetSource})
-        </p>
-      )}
-
-      <VaRMethodSelect
-        value={varMethod}
-        onChange={(method) => {
-          setVarMethod(method);
-          setVarResult(null);
-        }}
-      />
-
-      <VaRConfigPanel
-        varMethod={varMethod}
-        config={varConfig}
-        onChange={(newConfig) => {
-          setVarConfig(newConfig);
-          setVarResult(null);
-        }}
-      />
-
-      {/* <FileSelect apiBaseUrl={API_BASE_URL} onDatasetLoaded={setDatasetName} /> */}
-
-      {assets.length > 0 && datasetName && (
-        <PositionsTable
-          assets={assets}
-          positions={positions}
-          onHoldingChange={(asset, value) =>
-            setPositions((prev) => ({ ...prev, [asset]: value }))
-          }
-        />
-      )}
-
-      <button onClick={calculateVaR} disabled={loading || assets.length === 0}>
-        {loading ? "Calculating…" : "Calculate VaR"}
-      </button>
-
-      {error && <p style={{ color: "red" }}>{error}</p>}
-
-      <VaRResultPanel
-        varResult={varResult}
-        varMethod={varMethod}
-        assets={assets}
-      />
-
-      {/* {varResult && (
-        <div style={{ display: "flex", gap: 24, marginTop: 24 }}>
-          <VaRSummary {...varResult} />
-          <CorrelationMatrix corrMatrix={varResult.correlation_matrix} tickers={assets} />
-        </div>
-      )} */}
-    </div>
+        <Routes>
+          <Route
+            path="/"
+            element={
+              <FileSelectPage
+                datasetName={datasetName}
+                setDatasetName={setDatasetName}
+                setDatasetSource={setDatasetSource}
+                setError={setError}
+              />
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <VaRSettingsPage
+                varMethod={varMethod}
+                setVarMethod={setVarMethod}
+                varConfig={varConfig}
+                setVarConfig={setVarConfig}
+                setVarResult={setVarResult}
+              />
+            }
+          />
+          <Route
+            path="/portfolio"
+            element={
+              <PortfolioPage
+                assets={assets}
+                positions={positions}
+                setPositions={setPositions}
+                spotPrices={spotPrices}
+              />
+            }
+          />
+          <Route
+            path="/results"
+            element={
+              <VaRResultPage
+                varResult={varResult}
+                loading={loading}
+                error={error}
+                calculateVaR={calculateVaR}
+              />
+            }
+          />
+        </Routes>
+      </div>
+    </Router>
   );
 }
 

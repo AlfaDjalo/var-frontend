@@ -3,7 +3,7 @@ import React from "react";
 const METHODS = [
   { key: "parametric", label: "Parametric (Var-Covar)", enabled: true },
   { key: "histsim", label: "Historical Simulation", enabled: true },
-  { key: "montecarlo", label: "Monte Carlo (coming soon)", enabled: false },
+  { key: "montecarlo", label: "Monte Carlo", enabled: true },
 ];
 
 const VaRMethodSelect = ({ value, onChange }) => {
