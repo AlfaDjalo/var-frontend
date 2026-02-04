@@ -1,6 +1,7 @@
 import React from "react";
 import { useApp } from "../context/AppContext";
 import VaRResultPanel from "../components/VaRResultPanel";
+import { buildVaRPayload } from "../utils/buildVaRPayload";
 
 function VaRResultPage() {
   const { state, dispatch } = useApp();
@@ -14,54 +15,23 @@ function VaRResultPage() {
   };
 
   const calculateVaR = async () => {
-    if (!state.datasetName) {
-      dispatch({ type: "SET_ERROR", payload: "Please load a dataset first." });
-      return;
-    }
-
-    dispatch({ type: "SET_LOADING", payload: true });
-    dispatch({ type: "SET_ERROR", payload: null });
-
-    const productsArray = Object.entries(state.positions).flatMap(
-      ([key, pos], index) => {
-        if (pos.product_type === "stock") {
-          return {
-            product_id: `${key}_${index}`,
-            product_type: "stock",
-            ticker: pos.ticker,
-            quantity: pos.quantity,
-          };
-        } else if (pos.product_type === "equity_option") {
-          return {
-            product_id: `${key}_${index}`,
-            product_type: "option",
-            underlying_ticker: pos.underlying,
-            quantity: pos.quantity,
-            strike: pos.strike,
-            option_type: pos.option_type,
-            maturity: pos.maturity,            
-          };
-        }
-        return [];
-      }
-    );
-
-    const payload = {
-      dataset_name: state.datasetName,
-      confidence_level: state.varConfig.confidenceLevel,
-      estimation_window_days:
-        state.varMethod === "histsim"
-          ? state.varConfig.histDataWindowDays
-          : state.varMethod === "parametric"
-          ? state.varConfig.covWindowDays
-          : state.varConfig.parameterEstimationWindowDays,
-      asof_date: "2026-01-25",
-      products: productsArray,
-    };
-
     try {
+      if (!state.data.datasetName) {
+        dispatch({
+          type: "SET_ERROR",
+          payload: "Please load a dataset first.",
+        });
+        return;
+      }
+
+      dispatch({ type: "SET_LOADING", payload: true });
+      dispatch({ type: "SET_ERROR", payload: null });
+
+      /* -------- Build payload centrally -------- */
+      const payload = buildVaRPayload(state);
+
       const res = await fetch(
-        `${API_BASE_URL}${endpointByMethod[state.varMethod]}`,
+        `${API_BASE_URL}${endpointByMethod[state.var.method]}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -69,49 +39,51 @@ function VaRResultPage() {
         }
       );
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const msg = await res.text();
+        throw new Error(msg || "VaR request failed");
+      }
 
       const data = await res.json();
 
+      /* -------- Normalize backend response -------- */
       dispatch({
         type: "SET_VAR_RESULT",
         payload: {
           portfolioValue: data.portfolio_value,
           varDollars: data.var_dollar,
           varPercent: data.var_percent,
-          volatilityPercent: data.volatility_percent,
-          correlation_matrix: data.correlation_matrix,
+          diagnostics: data.diagnostics ?? null,
         },
       });
-    } catch {
-      dispatch({ type: "SET_ERROR", payload: "VaR calculation failed" });
+    } catch (err) {
+      dispatch({
+        type: "SET_ERROR",
+        payload: err.message || "VaR calculation failed",
+      });
+    } finally {
+      dispatch({ type: "SET_LOADING", payload: false });
     }
-
-    dispatch({ type: "SET_LOADING", payload: false });
   };
 
   return (
     <div>
       <h2>VaR Results</h2>
 
-      <button onClick={calculateVaR} disabled={state.loading}>
-        {state.loading ? "Running..." : "Run VaR"}
+      <button onClick={calculateVaR} disabled={state.ui.loading}>
+        {state.ui.loading ? "Running..." : "Run VaR"}
       </button>
 
-      {state.error && <p style={{ color: "red" }}>{state.error}</p>}
+      {state.ui.error && (
+        <p style={{ color: "red" }}>{state.ui.error}</p>
+      )}
 
-      {state.varResult && (
+      {state.var.result && (
         <VaRResultPanel
-          varResult={state.varResult}
-          varMethod={state.varMethod}
-          assets={state.assets}
+          varResult={state.var.result}
+          varMethod={state.var.method}
+          assets={state.data.assets}
         />
-        // <div>
-        //   <p>Portfolio Value: {state.varResult.portfolioValue}</p>
-        //   <p>VaR ($): {state.varResult.varDollars}</p>
-        //   <p>VaR (%): {state.varResult.varPercent}</p>
-        //   <p>Volatility (%): {state.varResult.volatilityPercent}</p>
-        // </div>
       )}
     </div>
   );

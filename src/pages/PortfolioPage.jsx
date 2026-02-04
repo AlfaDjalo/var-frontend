@@ -4,7 +4,12 @@ import PortfolioPanel from "../components/PortfolioPanel";
 
 function PortfolioPage() {
   const { state, dispatch } = useApp();
-  const { assets, spotPrices, positions } = state;
+
+  const assets = state.data.assets;
+  const spotPrices = state.data.spotPrices;
+  const positions = state.portfolio.positions;
+  
+  // const { assets, spotPrices, positions } = state;
   
   // const [addType, setAddType] = useState("stock");
   // const [newTicker, setNewTicker] = useState("");
@@ -55,7 +60,7 @@ function PortfolioPage() {
     }
 
     const filename = prompt("Enter filename", "portfolio.json") || "portfolio.json";
-    
+
     const blob = new Blob([dataToSave], { type: "application/json" });
     const url = URL.createObjectURL(blob);
 
