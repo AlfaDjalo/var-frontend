@@ -26,7 +26,8 @@ function FileSelectPage() {
     if (!datasetName) return;
 
     try {
-      const res = await fetch(`${API_BASE_URL}/parametric/inspect`, {
+      const res = await fetch(`${API_BASE_URL}/datasets/inspect`, {
+      // const res = await fetch(`${API_BASE_URL}/parametric/inspect`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ dataset_name: datasetName }),
@@ -35,6 +36,8 @@ function FileSelectPage() {
       if (!res.ok) throw new Error();
 
       const data = await res.json();
+
+      console.log("Assets: ", data.assets)
 
       dispatch({
         type: "SET_MARKET_DATA",

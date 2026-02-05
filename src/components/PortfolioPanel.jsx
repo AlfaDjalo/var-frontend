@@ -141,6 +141,7 @@ export default function PortfolioPanel({
             style={{ marginLeft: 8 }}
           >
             <option value="">Select ticker</option>
+            {/* {console.log("Assets: ", assets)} */}
             {assets.map((a) => (
               <option key={a} value={a}>
                 {a}
