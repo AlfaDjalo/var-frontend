@@ -1,30 +1,30 @@
-import { BrowserRouter as Router, Routes, Route, NavLink } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
-import FileSelectPage from "./pages/FileSelectPage";
+import HomePage from "./pages/HomePage";          // New home page you will create
+import FileSelectPage from "./pages/FileSelectPage";  // Load Data page
 import VaRSettingsPage from "./pages/VaRSettingsPage";
 import PortfolioPage from "./pages/PortfolioPage";
 import VaRResultPage from "./pages/VaRResultPage";
 
+import Header from "./components/Header";
+import Footer from "./components/Footer";
+
+import "./styles/ui.css";
+
 function App() {
   return (
     <Router basename="/var-frontend">
-      <div style={{ padding: 20 }}>
-        <h1>VaR App</h1>
-
-        <nav style={{ marginBottom: 20 }}>
-          <NavLink to="/">Load Data</NavLink>{" "}
-          <NavLink to="/settings">Settings</NavLink>{" "}
-          <NavLink to="/portfolio">Portfolio</NavLink>{" "}
-          <NavLink to="/results">Results</NavLink>
-        </nav>
-
+      <Header />
+      <main style={{ maxWidth: 960, margin: "24px auto", padding: "0 16px" }}>
         <Routes>
-          <Route path="/" element={<FileSelectPage />} />
+          <Route path="/" element={<HomePage />} />
+          <Route path="/load-data" element={<FileSelectPage />} />
           <Route path="/settings" element={<VaRSettingsPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/results" element={<VaRResultPage />} />
         </Routes>
-      </div>
+      </main>
+      <Footer />
     </Router>
   );
 }

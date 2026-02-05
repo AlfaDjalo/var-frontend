@@ -1,31 +1,25 @@
 import React from "react";
-import { useApp } from "../context/AppContext";
 
-function VaRConfigPanel() {
-  const { state, dispatch } = useApp();
-
-    if (!state?.var?.config) {
-        return <div>Loading VaR config...</div>;
-    }
-
-  const method = state.var.method;
-  const config = state.var.config;
+function VaRConfigPanel({ varMethod, config, onChange }) {
+  if (!config) {
+    return <div>Loading VaR config...</div>;
+  }
 
   /* ---------- Helpers ---------- */
 
   const updateGlobal = (key, value) => {
-    dispatch({
-      type: "UPDATE_VAR_CONFIG",
-      payload: { [key]: value },
+    onChange({
+      ...config,
+      [key]: value,
     });
   };
 
   const updateMethod = (values) => {
-    dispatch({
-      type: "UPDATE_METHOD_CONFIG",
-      payload: {
-        method,
-        values,
+    onChange({
+      ...config,
+      [varMethod]: {
+        ...config[varMethod],
+        ...values,
       },
     });
   };
@@ -36,7 +30,7 @@ function VaRConfigPanel() {
     <div style={{ border: "1px solid #ccc", padding: 16, maxWidth: 500 }}>
       <h3>VaR Configuration</h3>
 
-      {/* ================= Global ================= */}
+      {/* ===== Global ===== */}
 
       <div style={{ marginBottom: 12 }}>
         <label>
@@ -44,7 +38,10 @@ function VaRConfigPanel() {
           <select
             value={config.confidenceLevel}
             onChange={(e) =>
-              updateGlobal("confidenceLevel", Number(e.target.value))
+              updateGlobal(
+                "confidenceLevel",
+                Number(e.target.value)
+              )
             }
           >
             <option value={0.01}>99%</option>
@@ -54,24 +51,9 @@ function VaRConfigPanel() {
         </label>
       </div>
 
-      {/* <div style={{ marginBottom: 12 }}>
-        <label>
-          Estimation Window (days):&nbsp;
-          <input
-            type="number"
-            min={20}
-            max={2000}
-            value={config.estimationWindowDays}
-            onChange={(e) =>
-              updateGlobal("estimationWindowDays", Number(e.target.value))
-            }
-          />
-        </label>
-      </div> */}
+      {/* ===== Parametric ===== */}
 
-      {/* ================= Parametric ================= */}
-
-      {method === "parametric" && (
+      {varMethod === "parametric" && (
         <div style={{ marginBottom: 12 }}>
           <label>
             Covariance Window (days):&nbsp;
@@ -90,9 +72,9 @@ function VaRConfigPanel() {
         </div>
       )}
 
-      {/* ================= HistSim ================= */}
+      {/* ===== HistSim ===== */}
 
-      {method === "histsim" && (
+      {varMethod === "histsim" && (
         <div style={{ marginBottom: 12 }}>
           <label>
             Historical Window (days):&nbsp;
@@ -111,9 +93,9 @@ function VaRConfigPanel() {
         </div>
       )}
 
-      {/* ================= Monte Carlo ================= */}
+      {/* ===== Monte Carlo ===== */}
 
-      {method === "montecarlo" && (
+      {varMethod === "montecarlo" && (
         <>
           <div style={{ marginBottom: 12 }}>
             <label>

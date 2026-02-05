@@ -1,18 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
+import { useNavigate } from "react-router-dom";
+// import "../styles/FileSelect.css";
 
 function FileSelectPage() {
-  const { dispatch } = useApp();
+  const { state, dispatch } = useApp();
+  const navigate = useNavigate();
+
   const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
-  const [source, setSource] = useState("backend");
   const [datasets, setDatasets] = useState([]);
-  const [selectedBackendFile, setSelectedBackendFile] = useState("");
+  const [selectedBackendFile, setSelectedBackendFile] = useState(state.data.datasetName || "");
   const [localFileName, setLocalFileName] = useState("");
 
   const fileInputRef = useRef(null);
 
-  /* Load backend dataset list */
   useEffect(() => {
     fetch(`${API_BASE_URL}/datasets`)
       .then((res) => res.json())
@@ -20,14 +22,8 @@ function FileSelectPage() {
       .catch(() => setDatasets([]));
   }, [API_BASE_URL]);
 
-  /* Inspect dataset + load market data */
   const inspectDataset = async (datasetName, datasetSource) => {
     if (!datasetName) return;
-
-    dispatch({
-      type: "SET_DATASET",
-      payload: { name: datasetName, source: datasetSource },
-    });
 
     try {
       const res = await fetch(`${API_BASE_URL}/parametric/inspect`, {
@@ -40,21 +36,11 @@ function FileSelectPage() {
 
       const data = await res.json();
 
-      // const positions = {};
-      // data.assets.forEach((asset) => {
-      //   const spot = data.spot_prices?.[asset] ?? 0;
-      //   const marketValue = 100;
-      //   const quantity = spot ? marketValue / spot : 0;
-
-      //   positions[asset] = { quantity, marketValue };
-      // });
-
       dispatch({
         type: "SET_MARKET_DATA",
         payload: {
           assets: data.assets,
           spotPrices: data.spot_prices || {},
-          // positions,
         },
       });
 
@@ -64,20 +50,15 @@ function FileSelectPage() {
     }
   };
 
-  /* Backend selection */
   const onBackendChange = (e) => {
     const filename = e.target.value;
-
     setSelectedBackendFile(filename);
-    setLocalFileName("");
-    setSource("backend");
 
     if (filename) {
       inspectDataset(filename, "backend");
     }
   };
 
-  /* Local upload */
   const onChooseLocal = () => {
     fileInputRef.current.click();
   };
@@ -85,9 +66,6 @@ function FileSelectPage() {
   const onLocalPicked = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
-    setSource("local");
-    setSelectedBackendFile("");
 
     const formData = new FormData();
     formData.append("file", file);
@@ -106,7 +84,7 @@ function FileSelectPage() {
       const data = await res.json();
 
       setLocalFileName(file.name);
-
+      setSelectedBackendFile(data.filename); // Update selectedBackendFile for local upload
       await inspectDataset(data.filename, "local");
     } catch {
       alert("Upload failed due to network or server error");
@@ -115,64 +93,79 @@ function FileSelectPage() {
     }
   };
 
+  // Save handler: dispatch updated datasetName and navigate home
+  const onSaveAndExit = () => {
+    if (!selectedBackendFile) {
+      alert("Please select or upload a dataset before saving.");
+      return;
+    }
+
+    dispatch({
+      type: "SET_DATASET",
+      payload: { name: selectedBackendFile, source: "user" },
+    });
+
+    navigate("/");
+  };
+
+  // Cancel handler: revert local state to context datasetName and navigate home
+  const onCancelChanges = () => {
+    setSelectedBackendFile(state.data.datasetName || "");
+    setLocalFileName(""); // Clear local file name since we revert to context dataset
+    navigate("/");
+  };
+
   return (
-    <div style={{ border: "1px solid #ccc", padding: 16, maxWidth: 500 }}>
-      <h3>Dataset selection</h3>
+    <div className="file-page">
+      <div className="file-card">
+        <h2>Load Market Data</h2>
 
-      {/* Backend datasets */}
-      <label>
-        <input
-          type="radio"
-          checked={source === "backend"}
-          onChange={() => setSource("backend")}
-        />
-        Load sample dataset (server)
-      </label>
+        <div className="file-section">
+          <h3>Use sample dataset</h3>
+          <select
+            value={selectedBackendFile}
+            onChange={onBackendChange}
+            className="file-select"
+          >
+            <option value="">Select dataset...</option>
+            {datasets.map((f) => (
+              <option key={f} value={f}>
+                {f}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      <div style={{ marginLeft: 24, marginTop: 6 }}>
-        <select
-          disabled={source !== "backend"}
-          value={selectedBackendFile}
-          onChange={onBackendChange}
-        >
-          <option value="">Select dataset…</option>
-          {datasets.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
+        <div className="divider">or</div>
+
+        <div className="file-section">
+          <h3>Upload CSV</h3>
+
+          <button className="primary-btn" onClick={onChooseLocal}>
+            Choose CSV File
+          </button>
+
+          <div className="file-name">{localFileName || "No file selected"}</div>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv"
+            style={{ display: "none" }}
+            onChange={onLocalPicked}
+          />
+        </div>
+
+        <div className="button-row">
+          <button className="btn btn-primary" onClick={onSaveAndExit}>
+            Save and Exit
+          </button>
+          {/* <button className="primary-btn cancel-btn" onClick={onCancelChanges}> */}
+          <button className="btn btn-secondary" onClick={onCancelChanges}>
+            Cancel Changes
+          </button>
+        </div>
       </div>
-
-      <hr />
-
-      {/* Local upload */}
-      <label>
-        <input
-          type="radio"
-          checked={source === "local"}
-          onChange={() => setSource("local")}
-        />
-        Upload local CSV
-      </label>
-
-      <div style={{ marginLeft: 24, marginTop: 6 }}>
-        <button onClick={onChooseLocal} disabled={source !== "local"}>
-          Choose file
-        </button>
-
-        <span style={{ marginLeft: 10, fontStyle: "italic" }}>
-          {localFileName || "No file selected"}
-        </span>
-      </div>
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        accept=".csv"
-        style={{ display: "none" }}
-        onChange={onLocalPicked}
-      />
     </div>
   );
 }

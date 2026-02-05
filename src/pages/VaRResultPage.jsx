@@ -1,92 +1,146 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useApp } from "../context/AppContext";
-import VaRResultPanel from "../components/VaRResultPanel";
-import { buildVaRPayload } from "../utils/buildVaRPayload";
+import { runVaR } from "../services/runVaR";
 
-function VaRResultPage() {
+import VaRResultPanel from "../components/VaRResultPanel";
+// import PnLHistogram from "../components/PnLHistogram";
+import "../styles/VaRResultsPage.css";
+
+function VaRResultsPage() {
   const { state, dispatch } = useApp();
 
-  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+  // const result = state.var.result;
+  const { result } = state.var;
+  const { loading, error } = state.ui;
 
-  const endpointByMethod = {
-    parametric: "/parametric/calculate",
-    histsim: "/histsim/calculate",
-    montecarlo: "/montecarlo/calculate",
-  };
-
-  const calculateVaR = async () => {
-    try {
-      if (!state.data.datasetName) {
-        dispatch({
-          type: "SET_ERROR",
-          payload: "Please load a dataset first.",
-        });
-        return;
-      }
-
-      dispatch({ type: "SET_LOADING", payload: true });
-      dispatch({ type: "SET_ERROR", payload: null });
-
-      /* -------- Build payload centrally -------- */
-      const payload = buildVaRPayload(state);
-
-      const res = await fetch(
-        `${API_BASE_URL}${endpointByMethod[state.var.method]}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        }
-      );
-
-      if (!res.ok) {
-        const msg = await res.text();
-        throw new Error(msg || "VaR request failed");
-      }
-
-      const data = await res.json();
-
-      /* -------- Normalize backend response -------- */
-      dispatch({
-        type: "SET_VAR_RESULT",
-        payload: {
-          portfolioValue: data.portfolio_value,
-          varDollars: data.var_dollar,
-          varPercent: data.var_percent,
-          diagnostics: data.diagnostics ?? null,
-        },
-      });
-    } catch (err) {
-      dispatch({
-        type: "SET_ERROR",
-        payload: err.message || "VaR calculation failed",
-      });
-    } finally {
-      dispatch({ type: "SET_LOADING", payload: false });
+  useEffect(() => {
+    if (!result) {
+      runVaR(state, dispatch);
     }
-  };
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="bb-container">
+        <h2>Running VaR...</h2>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bb-container">
+        <h2 style={{ color: "red" }}>{error}</h2>
+      </div>
+    );
+  }
+  
+  if (!result) {
+    return (
+      <div className="bb-container">
+        <h2>No results</h2>
+      </div>
+    );
+  }
+
+  const methodLabel = {
+    parametric: "Parametric VaR",
+    histsim: "Historical Simulation VaR",
+    montecarlo: "Monte Carlo VaR",
+  }[state.var.method];
 
   return (
-    <div>
-      <h2>VaR Results</h2>
+    <div className="bb-container">
 
-      <button onClick={calculateVaR} disabled={state.ui.loading}>
-        {state.ui.loading ? "Running..." : "Run VaR"}
-      </button>
+      {/* HEADER */}
+      <div className="bb-header">
+        <div>
+          <h1>VaR Results</h1>
+          <div className="bb-subtitle">
+            Results for {methodLabel}
+          </div>
+        </div>
+      </div>
 
-      {state.ui.error && (
-        <p style={{ color: "red" }}>{state.ui.error}</p>
-      )}
-
-      {state.var.result && (
+      {/* METRICS STRIP */}
+      <div className="bb-metrics-strip">
         <VaRResultPanel
-          varResult={state.var.result}
+          varResult={result}
           varMethod={state.var.method}
           assets={state.data.assets}
         />
-      )}
+      </div>
+
+      {/* <div className="bb-grid">
+
+        <div className="bb-panel bb-chart-panel">
+          <div className="bb-panel-title">
+            PnL Distribution
+          </div>
+
+          {result.diagnostics?.pnls && (
+            <PnLHistogram
+              pnls={result.diagnostics.pnls}
+              varDollar={result.varDollars}
+            />
+          )}
+        </div>
+
+        <div className="bb-panel">
+          <div className="bb-panel-title">
+            Diagnostics
+          </div>
+
+          <DiagnosticsBlock result={result} />
+        </div>
+
+      </div> */}
     </div>
   );
 }
 
-export default VaRResultPage;
+export default VaRResultsPage;
+
+
+// /* -------- Diagnostics helper -------- */
+
+// function DiagnosticsBlock({ result }) {
+//   const d = result.diagnostics || {};
+
+//   return (
+//     <div className="bb-diagnostics">
+
+//       <DiagRow
+//         label="Model"
+//         value={d.model || "-"}
+//       />
+
+//       <DiagRow
+//         label="Confidence Level"
+//         value={d.confidence_level
+//           ? `${(1 - d.confidence_level) * 100}% tail`
+//           : "-"}
+//       />
+
+//       <DiagRow
+//         label="Simulations"
+//         value={d.n_sims || "-"}
+//       />
+
+//       <DiagRow
+//         label="Random Seed"
+//         value={d.random_seed ?? "None"}
+//       />
+
+//     </div>
+//   );
+// }
+
+// function DiagRow({ label, value }) {
+//   return (
+//     <div className="bb-diag-row">
+//       <span>{label}</span>
+//       <span>{value}</span>
+//     </div>
+//   );
+// }

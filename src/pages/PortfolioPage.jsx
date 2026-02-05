@@ -1,44 +1,83 @@
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useApp } from "../context/AppContext";
+import { useNavigate } from "react-router-dom";
 import PortfolioPanel from "../components/PortfolioPanel";
 
 function PortfolioPage() {
   const { state, dispatch } = useApp();
+  const navigate = useNavigate();
 
   const assets = state.data.assets;
   const spotPrices = state.data.spotPrices;
-  const positions = state.portfolio.positions;
-  
-  // const { assets, spotPrices, positions } = state;
-  
-  // const [addType, setAddType] = useState("stock");
-  // const [newTicker, setNewTicker] = useState("");
-  // const [newQuantity, setNewQuantity] = useState("");
-  // const [newStrike, setNewStrike] = useState("");
-  // const [newOptionType, setNewOptionType] = useState("call");
-  // const [newMaturity, setNewMaturity] = useState("");
-  
-  // const positionsArray = Object.entries(positions);
-  const positionsArray = Object.entries(positions).map(([id, pos]) => ({
+
+  const [localPositions, setLocalPositions] = useState(
+    state.portfolio.positions
+  );
+
+  useEffect(() => {
+    setLocalPositions(state.portfolio.positions);
+  }, [state.portfolio.positions]);
+
+  // // --- SOURCE OF TRUTH IN CONTEXT ---
+  // const contextPositions = state.portfolio.positions;
+
+  // // --- LOCAL DRAFT ---
+  // const [draftPositions, setDraftPositions] = useState(
+  //   structuredClone(contextPositions)
+  // );
+
+  // Re-sync draft if context changes (e.g. load portfolio elsewhere)
+  // useEffect(() => {
+  //   setDraftPositions(structuredClone(contextPositions));
+  // }, [contextPositions]);
+
+  // Convert draft object -> array for panel
+  const positionsArray = Object.entries(localPositions).map(([id, pos]) => ({
     ...pos,
     id,
   }));
-  
+
+  // ---------- Draft Editing ----------
   const handleAddPosition = (position) => {
     const id = crypto.randomUUID();
-    dispatch({ type: "ADD_POSITION", payload: { id, position } });
-  };
-  
-  const handleDeletePosition = (id) => {
-    dispatch({ type: "DELETE_POSITION", payload: id });
+    setDraftPositions((prev) => ({
+      ...prev,
+      [id]: position,
+    }));
   };
 
-  const handleSavePortfolio = async () => {
-    const dataToSave = JSON.stringify(positions, null, 2);
-    
+  const handleDeletePosition = (id) => {
+    setDraftPositions((prev) => {
+      const copy = { ...prev };
+      delete copy[id];
+      return copy;
+    });
+  };
+
+  // ---------- Save / Cancel ----------
+  const onSaveAndExit = () => {
+    dispatch({
+      type: "SET_POSITIONS",
+      payload: localPositions,
+    });
+    // alert("Portfolio changes saved");
+    navigate("/");
+  };
+
+  const onCancelChanges = () => {
+    setLocalPositions(state.portfolio.positions);
+    // setDraftPositions(structuredClone(contextPositions));
+    // alert("Changes discarded");
+    navigate("/");
+  };
+
+  // ---------- Optional File Save ----------
+  const handleSavePortfolioToFile = async () => {
+    const dataToSave = JSON.stringify(localPositions, null, 2);
+
     if (window.showSaveFilePicker) {
       try {
-        const options = {
+        const handle = await window.showSaveFilePicker({
           types: [
             {
               description: "JSON Files",
@@ -46,30 +85,33 @@ function PortfolioPage() {
             },
           ],
           suggestedName: "portfolio.json",
-        };
+        });
 
-        const handle = await window.showSaveFilePicker(options);
         const writable = await handle.createWritable();
         await writable.write(dataToSave);
         await writable.close();
-        alert("Portfolio saved successfully");
+        alert("Portfolio file saved");
         return;
       } catch (err) {
-        console.warn("Save failed or cancelled:", err);
+        console.warn(err);
       }
     }
-
-    const filename = prompt("Enter filename", "portfolio.json") || "portfolio.json";
 
     const blob = new Blob([dataToSave], { type: "application/json" });
     const url = URL.createObjectURL(blob);
 
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = filename;
-    link.click();
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "portfolio.json";
+    a.click();
 
     URL.revokeObjectURL(url);
+  };
+
+  const loadInputRef = useRef(null);
+
+  const handleLoadClick = () => {
+    loadInputRef.current.click();
   };
 
   const handleLoadPortfolio = (e) => {
@@ -77,114 +119,85 @@ function PortfolioPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = (ev) => {
       try {
-        const loadedPositions = JSON.parse(event.target.result);
+        const parsed = JSON.parse(ev.target.result);
 
-        if (
-          typeof loadedPositions === "object" &&
-          loadedPositions !== null &&
-          !Array.isArray(loadedPositions)
-        ) {
-          dispatch({ type: "SET_POSITIONS", payload: loadedPositions });
+        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+          setLocalPositions(parsed);
         } else {
-          alert("Invalid portfolio file format.");
-        } 
-      } catch {
-          alert("Error parsing portfolio file.");
+          alert("Invalid format");
         }
-      };
-
-      reader.readAsText(file);
-      e.target.value = null;
+      } catch {
+        alert("Parse error");
+      }
     };
-  // }
-  // const handleAddPosition = () => {
-  //   if (!newTicker || !newQuantity || isNaN(parseFloat(newQuantity))) {
-  //     alert("Enter valid ticker and quantity");
-  //     return;
-  //   }
 
-  //   if (!assets.includes(newTicker)) {
-  //     alert("Ticker not in dataset");
-  //     return;
-  //   }
+    reader.readAsText(file);
+    e.target.value = null;
+  };
 
-  //   const qty = parseFloat(newQuantity);
-  //   if (qty === 0) {
-  //     alert("Quantity cannot be zero");
-  //     return;
-  //   }
-
-  //   let position;
-
-  //   if (addType === "stock") {
-  //     position = {
-  //       product_type: "stock",
-  //       ticker: newTicker,
-  //       quantity: qty,
-  //     };
-  //   } else {
-  //     if (
-  //       !newStrike ||
-  //       !newMaturity ||
-  //       isNaN(parseFloat(newStrike)) ||
-  //       isNaN(parseFloat(newMaturity))
-  //     ) {
-  //       alert("Enter valid strike & maturity");
-  //       return;
-  //     }
-
-  //     position = {
-  //       product_type: "option",
-  //       underlying: newTicker,
-  //       quantity: qty,
-  //       strike: parseFloat(newStrike),
-  //       option_type: newOptionType,
-  //       maturity: parseFloat(newMaturity),
-  //     };
-  //   }
-
-  //   const id = crypto.randomUUID();
-
-  //   dispatch({
-  //     type: "ADD_POSITION",
-  //     payload: { id, position },
-  //   });
-
-  //   // reset inputs
-  //   setNewTicker("");
-  //   setNewQuantity("");
-  //   setNewStrike("");
-  //   setNewMaturity("");
-  //   setNewOptionType("call");
-  // };
-
-
+  // ---------- UI ----------
   return (
     <div>
       <h2>Portfolio Overview</h2>
 
-      <div style={{ marginBottom: 16 }}>
-        <button onClick={handleSavePortfolio}>Save Portfolio</button>
+      <div style={{ marginBottom: 16, display: "flex", gap: 12 }}>
+        <button className="btn btn-primary" onClick={handleLoadClick}>
+          Load Portfolio File
+        </button>
 
-        <label
+        <input
+          ref={loadInputRef}
+          type="file"
+          accept=".json"
+          hidden
+          onChange={handleLoadPortfolio}
+        />
+        
+        <button className="btn btn-primary" onClick={handleSavePortfolioToFile}>
+          Save Portfolio File
+        </button>
+      </div>
+
+      {/* <div style={{ marginBottom: 16 }}> */}
+        {/* <button onClick={handleSaveAndExit}>Save & Exit</button>
+
+        <button
+          onClick={handleCancelChanges}
+          style={{ marginLeft: 10 }}
+        >
+          Cancel Changes
+        </button> */}
+
+        {/* <button className="btn btn-primary" onClick={handleSavePortfolioToFile}> */}
+
+        {/* <button
+          onClick={handleSavePortfolioToFile}
+          style={{ marginLeft: 20 }}
+        > */}
+          {/* Export File */}
+        {/* </button> */}
+
+        {/* <button className="btn btn-primary" onClick={handleSavePortfolioToFile}> */}
+        {/* <label
           style={{
             marginLeft: 20,
             cursor: "pointer",
             color: "blue",
             textDecoration: "underline",
           }}
-        >
-          Load Portfolio
+        > */}
+          {/* Load File
           <input
             type="file"
             accept=".json"
-            style={{ display: "none" }}
+            hidden
             onChange={handleLoadPortfolio}
           />
-        </label>
-      </div>
+        </button> */}
+        {/* </label> */}
+      {/* </div> */}
 
       <PortfolioPanel
         assets={assets}
@@ -193,128 +206,18 @@ function PortfolioPage() {
         onAddPosition={handleAddPosition}
         onDeletePosition={handleDeletePosition}
       />
-      {/* {positionsArray.length === 0 ? (
-        <p>No positions added yet.</p>
-      ) : (
-        <table border={1} cellPadding={8}>
-          <thead>
-            <tr>
-              <th>Ticker</th>
-              <th>Type</th>
-              <th>Qty</th>
-              <th>Strike</th>
-              <th>Option</th>
-              <th>Maturity</th>
-              <th>Spot</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody>
-            {positionsArray.map(([id, pos]) => {
-              const ticker =
-                pos.product_type === "stock"
-                  ? pos.ticker
-                  : pos.underlying;
 
-              const spot = spotPrices[ticker] || 0;
-
-              return (
-                <tr key={id}>
-                  <td>{ticker}</td>
-                  <td>{pos.product_type}</td>
-                  <td>{pos.quantity}</td>
-                  <td>{pos.strike || "—"}</td>
-                  <td>{pos.option_type || "—"}</td>
-                  <td>{pos.maturity || "—"}</td>
-                  <td>{spot.toFixed(2)}</td>
-                  <td>
-                    <button onClick={() => handleDelete(id)}>
-                      Delete
-                    </button>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      )}
-
-      <hr />
-
-      <h3>Add Position</h3>
-
-      <label>
-        <input
-          type="radio"
-          checked={addType === "stock"}
-          onChange={() => setAddType("stock")}
-        />
-        Stock
-      </label>
-
-      <label style={{ marginLeft: 10 }}>
-        <input
-          type="radio"
-          checked={addType === "option"}
-          onChange={() => setAddType("option")}
-        />
-        Option
-      </label>
-
-      <div>
-        <select
-          value={newTicker}
-          onChange={(e) => setNewTicker(e.target.value)}
-        >
-          <option value="">Select ticker</option>
-          {assets.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
+      <div className="button-row">
+        <button className="btn btn-primary" onClick={onSaveAndExit}>
+          Save and Exit
+        </button>
+        {/* <button className="primary-btn cancel-btn" onClick={onCancelChanges}> */}
+        <button className="btn btn-secondary" onClick={onCancelChanges}>
+          Cancel Changes
+        </button>
       </div>
 
-      <div>
-        <input
-          type="number"
-          placeholder="Quantity"
-          value={newQuantity}
-          onChange={(e) => setNewQuantity(e.target.value)}
-        />
-      </div>
-
-      {addType === "option" && (
-        <>
-          <input
-            type="number"
-            placeholder="Strike"
-            value={newStrike}
-            onChange={(e) => setNewStrike(e.target.value)}
-          />
-
-          <select
-            value={newOptionType}
-            onChange={(e) => setNewOptionType(e.target.value)}
-          >
-            <option value="call">Call</option>
-            <option value="put">Put</option>
-          </select>
-
-          <input
-            type="number"
-            placeholder="Maturity"
-            value={newMaturity}
-            onChange={(e) => setNewMaturity(e.target.value)}
-          />
-        </>
-      )}
-
-      <br />
-      <button onClick={handleAddPosition}>
-        Add Position
-      </button> */}
-    </div> 
+    </div>
   );
 }
 

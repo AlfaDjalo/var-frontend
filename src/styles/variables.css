@@ -1,0 +1,14 @@
+:root {
+  --color-primary: #8c9eff;  /* pastel purple */
+  --color-primary-dark: #5c6bc0;
+  --color-secondary: #80deea; /* pastel blue */
+  --color-bg: #f7f9fc;
+  --color-text: #333;
+  --color-link: var(--color-primary-dark);
+  --color-link-hover: var(--color-primary);
+  --color-footer-bg: #e3eafc;
+  --color-footer-text: #555;
+
+  --font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --font-size-base: 16px;
+}

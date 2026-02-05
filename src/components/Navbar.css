@@ -1,0 +1,25 @@
+@import "../styles/variables.css";
+
+.navbar {
+  display: flex;
+  gap: 24px;
+  font-family: var(--font-family);
+  font-weight: 600;
+}
+
+.nav-link {
+  color: white;
+  text-decoration: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.3s ease;
+}
+
+.nav-link:hover {
+  background-color: var(--color-primary-dark);
+}
+
+.nav-link.active {
+  background-color: var(--color-secondary);
+  color: var(--color-primary-dark);
+}

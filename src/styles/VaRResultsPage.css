@@ -1,0 +1,92 @@
+/* PAGE */
+
+.bb-container {
+  padding: 24px 32px;
+  background: #f4f6f8;
+  min-height: 100vh;
+  font-family: system-ui, -apple-system, sans-serif;
+  color: #111;
+}
+
+/* HEADER */
+
+.bb-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 18px;
+}
+
+.bb-header h1 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 600;
+}
+
+.bb-subtitle {
+  color: #667085;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
+/* METRICS STRIP */
+
+.bb-metrics-strip {
+  margin-bottom: 20px;
+}
+
+/* GRID */
+
+.bb-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 20px;
+}
+
+/* PANELS */
+
+.bb-panel {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 18px;
+}
+
+.bb-panel-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #374151;
+}
+
+/* CHART PANEL */
+
+.bb-chart-panel {
+  min-height: 420px;
+}
+
+/* DIAGNOSTICS */
+
+.bb-diagnostics {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.bb-diag-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  padding: 6px 0;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.bb-diag-row:last-child {
+  border-bottom: none;
+}
+
+.save-btn {
+  margin-top: 30px;
+  width: 100%;
+  font-weight: 600;
+}

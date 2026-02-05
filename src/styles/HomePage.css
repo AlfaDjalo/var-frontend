@@ -1,0 +1,84 @@
+/* HomePage.css */
+.home-container {
+  max-width: 700px;
+  margin: 40px auto;
+  padding: 20px;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  color: #222;
+  background-color: #f7f9fc;
+  border-radius: 8px;
+  box-shadow: 0 3px 10px rgb(0 0 0 / 0.1);
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: 32px;
+  font-weight: 600;
+  color: #4a4a8a; /* pastel purple */
+}
+
+.steps-container {
+  display: flex;
+  justify-content: space-around;
+  margin-bottom: 40px;
+}
+
+.step-btn {
+  background-color: #e6eafc; /* pastel light purple */
+  border: 2px solid #9a9ace;
+  border-radius: 10px;
+  padding: 24px 20px;
+  width: 180px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4a4a8a;
+  cursor: pointer;
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.step-btn:hover {
+  background-color: #d0d6fc;
+  border-color: #7074d1;
+}
+
+.step-status {
+  margin-top: 12px;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: #6e6ea0;
+  text-align: center;
+}
+
+.run-var-section {
+  text-align: center;
+}
+
+.run-var-btn {
+  background-color: #7f9d7f; /* pastel green */
+  color: white;
+  font-weight: 700;
+  font-size: 1.25rem;
+  padding: 14px 40px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgb(127 157 127 / 0.4);
+  transition: background-color 0.3s ease;
+}
+
+.run-var-btn:disabled,
+.run-var-btn[aria-disabled="true"] {
+  background-color: #b4c6b4;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.run-status {
+  margin-top: 16px;
+  font-style: italic;
+  color: #4a4a8a;
+  font-weight: 600;
+}

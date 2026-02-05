@@ -7,7 +7,7 @@ const METHODS = [
   { key: "montecarlo", label: "Monte Carlo" },
 ];
 
-const VaRMethodSelect = () => {
+const VaRMethodSelect = ({ value, onChange }) => {
   const { state, dispatch } = useApp();
 
   return (
@@ -15,13 +15,15 @@ const VaRMethodSelect = () => {
       <h3>VaR Methodology</h3>
 
       <select
-        value={state.varMethod}
-        onChange={(e) =>
-          dispatch({
-            type: "SET_VAR_METHOD",
-            payload: e.target.value,
-          })
-        }
+        value={value}
+        // value={state.var.method}
+        onChange={(e) => onChange(e.target.value)}
+        // onChange={(e) =>
+        //   dispatch({
+        //     type: "SET_VAR_METHOD",
+        //     payload: e.target.value,
+        //   })
+        // }
       >
         {METHODS.map((m) => (
           <option key={m.key} value={m.key}>

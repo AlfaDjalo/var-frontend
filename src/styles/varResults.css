@@ -1,0 +1,79 @@
+/* --- Layout --- */
+
+.var-page {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.var-run-btn {
+  background: #7c3aed;
+  color: #ffffff;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+}
+
+.var-run-btn:hover {
+  background: #6d28d9;
+}
+
+/* .var-run-btn {
+  padding: 10px 18px;
+  border-radius: 8px;
+  border: none;
+  background: #a78bfa;
+  color: white;
+  font-weight: 600;
+  cursor: pointer;
+} */
+
+.var-run-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* --- Stat cards --- */
+
+.var-stats-row {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.var-card {
+  background: white;
+  padding: 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  flex: 1;
+}
+
+.var-card-label {
+  font-size: 14px;
+  color: #666;
+}
+
+.var-card-value {
+  font-size: 22px;
+  font-weight: 600;
+}
+
+/* --- Histogram --- */
+
+.histogram-container {
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  margin-top: 20px;
+}
+
+.histogram-title {
+  margin-bottom: 10px;
+}
+
+/* --- Errors --- */
+
+.var-error {
+  color: red;
+  margin-top: 10px;
+}
