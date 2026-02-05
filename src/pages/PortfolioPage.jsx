@@ -40,14 +40,14 @@ function PortfolioPage() {
   // ---------- Draft Editing ----------
   const handleAddPosition = (position) => {
     const id = crypto.randomUUID();
-    setDraftPositions((prev) => ({
+    setLocalPositions((prev) => ({
       ...prev,
       [id]: position,
     }));
   };
 
   const handleDeletePosition = (id) => {
-    setDraftPositions((prev) => {
+    setLocalPositions((prev) => {
       const copy = { ...prev };
       delete copy[id];
       return copy;
@@ -154,7 +154,7 @@ function PortfolioPage() {
           hidden
           onChange={handleLoadPortfolio}
         />
-        
+
         <button className="btn btn-primary" onClick={handleSavePortfolioToFile}>
           Save Portfolio File
         </button>
