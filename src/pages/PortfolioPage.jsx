@@ -7,6 +7,8 @@ function PortfolioPage() {
   const { state, dispatch } = useApp();
   const navigate = useNavigate();
 
+  const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+
   const assets = state.data.assets;
   const spotPrices = state.data.spotPrices;
 
@@ -16,22 +18,9 @@ function PortfolioPage() {
 
   useEffect(() => {
     setLocalPositions(state.portfolio.positions);
-  }, [state.portfolio.positions]);
+  }, [state.data.datasetName]);
+  // }, [state.portfolio.positions]);
 
-  // // --- SOURCE OF TRUTH IN CONTEXT ---
-  // const contextPositions = state.portfolio.positions;
-
-  // // --- LOCAL DRAFT ---
-  // const [draftPositions, setDraftPositions] = useState(
-  //   structuredClone(contextPositions)
-  // );
-
-  // Re-sync draft if context changes (e.g. load portfolio elsewhere)
-  // useEffect(() => {
-  //   setDraftPositions(structuredClone(contextPositions));
-  // }, [contextPositions]);
-
-  // Convert draft object -> array for panel
   const positionsArray = Object.entries(localPositions).map(([id, pos]) => ({
     ...pos,
     id,
@@ -60,20 +49,33 @@ function PortfolioPage() {
       type: "SET_POSITIONS",
       payload: localPositions,
     });
-    // alert("Portfolio changes saved");
+
+    dispatch({ type: "SET_VAR_RESULT", payload: null });
+
     navigate("/");
   };
 
   const onCancelChanges = () => {
     setLocalPositions(state.portfolio.positions);
-    // setDraftPositions(structuredClone(contextPositions));
-    // alert("Changes discarded");
     navigate("/");
   };
 
-  // ---------- Optional File Save ----------
+  // ---------- Save Portfolio File ----------
   const handleSavePortfolioToFile = async () => {
-    const dataToSave = JSON.stringify(localPositions, null, 2);
+    // const payload = {
+    //   datasetName: state.data.datasetName,
+    //   positions: localPositions,
+    // };
+    const portfolioFile = {
+      dataset: {
+        datasetName: state.data.datasetName,
+        datasetSource: state.data.datasetSource,
+      },
+      positions: localPositions,
+    };
+
+    const dataToSave = JSON.stringify(portfolioFile, null, 2);
+    // const dataToSave = JSON.stringify(payload, null, 2);
 
     if (window.showSaveFilePicker) {
       try {
@@ -108,10 +110,24 @@ function PortfolioPage() {
     URL.revokeObjectURL(url);
   };
 
+
+  // ---------- Load Portfolio File ----------
   const loadInputRef = useRef(null);
 
   const handleLoadClick = () => {
     loadInputRef.current.click();
+  };
+
+  const inspectDataset = async (datasetName) => {
+    const res = await fetch(`${API_BASE_URL}/datasets/inspect`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dataset_name: datasetName }),
+    });
+
+    if (!res.ok) throw new Error("Inspect failed");
+
+    return await res.json();
   };
 
   const handleLoadPortfolio = (e) => {
@@ -119,17 +135,75 @@ function PortfolioPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (ev) => {
+
+    reader.onload = async (ev) => {
       try {
         const parsed = JSON.parse(ev.target.result);
+        console.log(parsed);
 
-        if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-          setLocalPositions(parsed);
-        } else {
-          alert("Invalid format");
+        if (!parsed.dataset || !parsed.positions) {
+          alert("Invalid portfolio file format");
+          return;
         }
-      } catch {
-        alert("Parse error");
+
+        // const datasetName = parsed.datasetName;
+        const { dataset, positions } = parsed;
+        console.log("positions: ", positions)
+
+        dispatch({
+          type: "SET_DATASET",
+          payload: {
+            name: dataset.datasetName,
+            source: dataset.datasetSource,
+          },
+        });
+
+        const data = await inspectDataset(dataset.datasetName);
+
+        dispatch({
+          type: "SET_MARKET_DATA",
+          payload: {
+            assets: data.assets,
+            spotPrices: data.spot_prices || {},
+          },
+        });
+
+        const validAssets = data.assets;
+
+        const cleaned = Object.fromEntries(
+          Object.entries(parsed.positions).filter(([__dirname, pos]) => {
+            const ticker = 
+              pos.product_type === "stock"
+              ? pos.ticker
+              : pos.underlying;
+
+              return validAssets.includes(ticker);
+          })
+        );
+
+        const removedCount = 
+          Object.keys(parsed.positions).length -
+          Object.keys(cleaned).length;
+
+        if (removedCount > 0) {
+          alert(
+            `${removedCount} positions removed (assets not in dataset)`
+          );
+        }
+        console.log("Cleaned: ", cleaned)
+        setLocalPositions(cleaned);
+
+        dispatch({ type: "SET_VAR_RESULT", payload: null });
+
+        alert("Portfolio + dataset loaded");
+        // if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        //   setLocalPositions(parsed);
+        // } else {
+        //   alert("Invalid format");
+        // }
+      } catch (err) {
+        console.error(err);
+        alert("Failed to load portfolio");
       }
     };
 
@@ -159,45 +233,6 @@ function PortfolioPage() {
           Save Portfolio File
         </button>
       </div>
-
-      {/* <div style={{ marginBottom: 16 }}> */}
-        {/* <button onClick={handleSaveAndExit}>Save & Exit</button>
-
-        <button
-          onClick={handleCancelChanges}
-          style={{ marginLeft: 10 }}
-        >
-          Cancel Changes
-        </button> */}
-
-        {/* <button className="btn btn-primary" onClick={handleSavePortfolioToFile}> */}
-
-        {/* <button
-          onClick={handleSavePortfolioToFile}
-          style={{ marginLeft: 20 }}
-        > */}
-          {/* Export File */}
-        {/* </button> */}
-
-        {/* <button className="btn btn-primary" onClick={handleSavePortfolioToFile}> */}
-        {/* <label
-          style={{
-            marginLeft: 20,
-            cursor: "pointer",
-            color: "blue",
-            textDecoration: "underline",
-          }}
-        > */}
-          {/* Load File
-          <input
-            type="file"
-            accept=".json"
-            hidden
-            onChange={handleLoadPortfolio}
-          />
-        </button> */}
-        {/* </label> */}
-      {/* </div> */}
 
       <PortfolioPanel
         assets={assets}

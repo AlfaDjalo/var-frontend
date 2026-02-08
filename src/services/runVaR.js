@@ -18,6 +18,7 @@ export async function runVaR(state, dispatch) {
     dispatch({ type: "SET_ERROR", payload: null });
 
     const payload = buildVaRPayload(state);
+    console.log("VaR payload: ", payload)
 
     const res = await fetch(
       `${API_BASE_URL}${endpointByMethod[state.var.method]}`,
@@ -34,6 +35,7 @@ export async function runVaR(state, dispatch) {
     }
 
     const data = await res.json();
+    console.log("VaR response: ", data)
 
     dispatch({
       type: "SET_VAR_RESULT",

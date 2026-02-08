@@ -5,6 +5,7 @@ export function buildVaRPayload(state) {
     throw new Error("Dataset not selected");
   }
 
+  console.log("Positions: ", state.portfolio.positions)
   const productsArray = Object.entries(state.portfolio.positions).flatMap(
     ([key, pos], index) => {
         if (pos.product_type === "stock") {
@@ -14,10 +15,10 @@ export function buildVaRPayload(state) {
                 ticker: pos.ticker,
                 quantity: pos.quantity,
             };
-        } else if (pos.product_type === "equity_option") {
+        } else if (pos.product_type === "option") {
             return {
                 product_id: `${key}_${index}`,
-                product_type: "option",
+                product_type: "equity_option",
                 underlying_ticker: pos.underlying,
                 quantity: pos.quantity,
                 strike: pos.strike,
@@ -61,6 +62,10 @@ export function buildVaRPayload(state) {
     if (config.montecarlo.randomSeed != null) {
       payload.random_seed = config.montecarlo.randomSeed;
     }
+
+    if (config.montecarlo.volOfVol != null) {
+      payload.vol_of_vol = config.montecarlo.volOfVol / 100;
+    }
   }
 
   if (method === "parametric") {
@@ -73,5 +78,6 @@ export function buildVaRPayload(state) {
       config.histsim.histDataWindowDays;
   }
 
+  console.log("Payload: ", payload)
   return payload;
 }

@@ -13,22 +13,59 @@ import {
 
 import "../styles/varResults.css";
 
-function buildHistogram(data, nBins = 30) {
+
+function niceNumber(x) {
+  const exp = Math.floor(Math.log10(x));
+  const f = x / Math.pow(10, exp);
+
+  let nf;
+  if (f <= 1) nf = 1;
+  else if (f <= 2) nf = 2;
+  else if (f <= 5) nf = 5;
+  else nf = 10;
+
+  return nf * Math.pow(10, exp);
+}
+
+
+
+function buildHistogram(data, targetBins = 30) {
   if (!data?.length) return [];
 
-  const min = Math.min(...data);
-  const max = Math.max(...data);
-  const width = (max - min) / nBins;
+  const rawMin = Math.min(...data);
+  const rawMax = Math.max(...data);
 
+  if (rawMin == rawMax) return [];
+
+  const range = rawMax - rawMin;
+
+  const rawWidth = range / targetBins;
+  const width = niceNumber(rawWidth);
+
+  let niceMin = Math.floor(rawMin / width) * width;
+  let niceMax = Math.ceil(rawMax / width) * width;
+
+  if (niceMin < 0 && niceMax > 0) {
+    niceMin = Math.floor(rawMin / width) * width;
+    const binsBelowZero = Math.ceil(Math.abs(niceMin) / width);
+    niceMin = -binsBelowZero * width;
+
+    const binsAboveZero = Math.ceil(rawMax / width);
+    niceMax = binsAboveZero * width;
+  }
+
+  const nBins = Math.round((niceMax - niceMin) / width);
+  
   const bins = Array.from({ length: nBins }, (_, i) => ({
-    start: min + i * width,
-    end: min + (i + 1) * width,
+    start: niceMin + i * width,
+    end: niceMin + (i + 1) * width,
     count: 0,
   }));
 
   data.forEach((x) => {
-    let idx = Math.floor((x - min) / width);
-    if (idx === nBins) idx = nBins - 1;
+    let idx = Math.floor((x - niceMin) / width);
+    if (idx < 0) idx = 0;
+    if (idx >= nBins) idx = nBins - 1;
     bins[idx].count++;
   });
 
@@ -41,7 +78,8 @@ function buildHistogram(data, nBins = 30) {
 }
 
 function PnLHistogram({ pnls, varDollars }) {
-  const histData = useMemo(() => buildHistogram(pnls), [pnls]);
+  // Ned to link to number bins parameter
+  const histData = useMemo(() => buildHistogram(pnls, 30), [pnls]);
 
   if (!pnls?.length) return null;
 
@@ -73,7 +111,7 @@ function PnLHistogram({ pnls, varDollars }) {
           />
 
           <ReferenceLine
-            x={varDollars}
+            x={-varDollars}
             stroke="red"
             strokeWidth={2}
             label="VaR"
@@ -83,7 +121,7 @@ function PnLHistogram({ pnls, varDollars }) {
             {histData.map((entry, i) => (
               <Cell
                 key={i}
-                fill={entry.mid <= varDollars ? "#fca5a5" : "#8884d8"}
+                fill={entry.mid <= -varDollars ? "#fca5a5" : "#8884d8"}
               />
             ))}
           </Bar>

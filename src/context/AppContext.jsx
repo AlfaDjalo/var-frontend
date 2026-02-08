@@ -15,7 +15,7 @@ const initialState = {
 
   /* -------- Portfolio domain -------- */
   portfolio: {
-    positions: {}, // { id: product }
+    positions: {},
   },
 
   /* -------- VaR domain -------- */
@@ -24,9 +24,7 @@ const initialState = {
 
     config: {
       confidenceLevel: 0.01,
-    //   estimationWindowDays: 252,
 
-      /* Method-specific */
       parametric: {
         covWindowDays: 252,
       },
@@ -38,6 +36,7 @@ const initialState = {
       montecarlo: {
         nSims: 10000,
         randomSeed: null,
+        volOfVol: null,
       },
     },
 
@@ -65,6 +64,10 @@ function reducer(state, action) {
           datasetName: action.payload.name,
           datasetSource: action.payload.source,
         },
+        var: {
+          ...state.var,
+          result: null, // dataset change invalidates VaR
+        },
       };
 
     case "SET_MARKET_DATA":
@@ -77,6 +80,10 @@ function reducer(state, action) {
         },
         portfolio: {
           positions: {}, // reset portfolio on new dataset
+        },
+        var: {
+          ...state.var,
+          result: null, // new market data invalidates VaR
         },
       };
 
@@ -94,6 +101,10 @@ function reducer(state, action) {
             [id]: position,
           },
         },
+        var: {
+          ...state.var,
+          result: null, // portfolio change invalidates VaR
+        },
       };
     }
 
@@ -107,6 +118,10 @@ function reducer(state, action) {
           ...state.portfolio,
           positions: copy,
         },
+        var: {
+          ...state.var,
+          result: null,
+        },
       };
     }
 
@@ -115,6 +130,10 @@ function reducer(state, action) {
         ...state,
         portfolio: {
           positions: action.payload,
+        },
+        var: {
+          ...state.var,
+          result: null,
         },
       };
 
@@ -126,7 +145,7 @@ function reducer(state, action) {
         var: {
           ...state.var,
           method: action.payload,
-          result: null, // clear stale results
+          result: null,
         },
       };
 

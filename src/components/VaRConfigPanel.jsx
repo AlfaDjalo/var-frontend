@@ -131,6 +131,24 @@ function VaRConfigPanel({ varMethod, config, onChange }) {
               />
             </label>
           </div>
+
+          <div style={{ marginBottom: 12 }}>
+            <label>
+              Vol of Vol (optional):&nbsp;
+              <input
+                type="number"
+                value={config.montecarlo.volOfVol ?? ""}
+                onChange={(e) =>
+                  updateMethod({
+                    volOfVol:
+                      e.target.value === ""
+                        ? null
+                        : Number(e.target.value),
+                  })
+                }
+              />
+            </label>
+          </div>
         </>
       )}
     </div>
