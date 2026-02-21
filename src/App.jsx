@@ -5,6 +5,7 @@ import FileSelectPage from "./pages/FileSelectPage";  // Load Data page
 import VaRSettingsPage from "./pages/VaRSettingsPage";
 import PortfolioPage from "./pages/PortfolioPage";
 import VaRResultPage from "./pages/VaRResultPage";
+import RiskPage from "./pages/RiskPage";
 
 import Header from "./components/Header";
 import Footer from "./components/Footer";
@@ -22,6 +23,7 @@ function App() {
           <Route path="/settings" element={<VaRSettingsPage />} />
           <Route path="/portfolio" element={<PortfolioPage />} />
           <Route path="/results" element={<VaRResultPage />} />
+          <Route path="/risk" element={<RiskPage />} /> 
         </Routes>
       </main>
       <Footer />

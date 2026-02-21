@@ -1,6 +1,6 @@
 import React, { useEffect } from "react";
 import { useApp } from "../context/AppContext";
-import { runVaR } from "../services/runVaR";
+import { runVaR } from "../api/varApi";
 
 import VaRResultPanel from "../components/VaRResultPanel";
 // import PnLHistogram from "../components/PnLHistogram";

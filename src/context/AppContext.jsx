@@ -16,6 +16,7 @@ const initialState = {
   /* -------- Portfolio domain -------- */
   portfolio: {
     positions: {},
+    factorExposures: {}, // { positionId: { spot: {}, rate: {}, vol: {} } }
   },
 
   /* -------- VaR domain -------- */
@@ -41,6 +42,12 @@ const initialState = {
     },
 
     result: null,
+  },
+
+  /* -------- Risk domain -------- */
+  risk: {
+    result: null,
+    factors: null,
   },
 
   /* -------- UI domain -------- */
@@ -105,6 +112,9 @@ function reducer(state, action) {
           ...state.var,
           result: null, // portfolio change invalidates VaR
         },
+        risk: {
+          result: null,
+        },
       };
     }
 
@@ -122,6 +132,9 @@ function reducer(state, action) {
           ...state.var,
           result: null,
         },
+        risk: {
+          result: null,
+        },
       };
     }
 
@@ -133,6 +146,9 @@ function reducer(state, action) {
         },
         var: {
           ...state.var,
+          result: null,
+        },
+        risk: {
           result: null,
         },
       };
@@ -187,6 +203,24 @@ function reducer(state, action) {
         var: {
           ...state.var,
           result: action.payload,
+        },
+      };
+
+    /* ---------- UI ---------- */
+    case "SET_RISK_RESULT":
+      return {
+        ...state,
+        risk: {
+          ...state.risk,
+          result: action.payload,
+        },
+      };
+
+    case "CLEAR_RISK":
+      return {
+        ...state,
+        risk: {
+          result: null,
         },
       };
 

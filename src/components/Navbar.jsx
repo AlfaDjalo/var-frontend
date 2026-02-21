@@ -31,6 +31,12 @@ export default function Navbar() {
         Portfolio
       </NavLink>
       <NavLink
+        to="/risk"
+        className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
+      >
+        Risk
+      </NavLink>
+      <NavLink
         to="/results"
         className={({ isActive }) => (isActive ? "nav-link active" : "nav-link")}
       >
