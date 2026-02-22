@@ -1,11 +1,15 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 export default function PortfolioPanel({
   assets,
   spotPrices,
   positions,
+  editingId,  
   onAddPosition,
   onDeletePosition,
+  onEditPosition,
+  onUpdatePosition,
+  onCancelEdit
 }) {
   // Inputs for add position
   const [addType, setAddType] = useState("stock");
@@ -14,6 +18,28 @@ export default function PortfolioPanel({
   const [newStrike, setNewStrike] = useState("");
   const [newOptionType, setNewOptionType] = useState("call");
   const [newMaturity, setNewMaturity] = useState("");
+
+  // 🔥 Populate form when editing
+  useEffect(() => {
+    if (!editingId) return;
+
+    const position = positions.find(p => p.id === editingId);
+    if (!position) return;
+
+    setAddType(position.product_type);
+    setNewQuantity(position.quantity);
+
+    if (position.product_type === "stock") {
+      setNewTicker(position.ticker);
+      setNewStrike("");
+      setNewMaturity("");
+    } else {
+      setNewTicker(position.underlying);
+      setNewStrike(position.strike);
+      setNewOptionType(position.option_type);
+      setNewMaturity(position.maturity);
+    }
+  }, [editingId, positions]);
 
   const handleAddPosition = () => {
     if (!newTicker || !newQuantity || isNaN(parseFloat(newQuantity))) {
@@ -67,6 +93,56 @@ export default function PortfolioPanel({
     setNewMaturity("");
   };
 
+  const resetForm = () => {
+    setNewTicker("");
+    setNewQuantity("");
+    setNewStrike("");
+    setNewOptionType("call");
+    setNewMaturity("");
+  };
+
+  const buildPosition = () => {
+    if (!newTicker || !newQuantity) return null;
+
+    const qty = parseFloat(newQuantity);
+    if (isNaN(qty) || qty === 0) return null;
+
+    if (addType === "stock") {
+      return {
+        product_type: "stock",
+        ticker: newTicker,
+        quantity: qty
+      };
+    }
+
+    return {
+      product_type: "option",
+      underlying: newTicker,
+      quantity: qty,
+      strike: parseFloat(newStrike),
+      option_type: newOptionType,
+      maturity: parseFloat(newMaturity)
+    };
+  };
+
+  const handleSubmit = () => {
+    const position = buildPosition();
+    if (!position) return;
+
+    if (editingId) {
+      onUpdatePosition(editingId, position);
+    } else {
+      onAddPosition(position);
+    }
+
+    resetForm();
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    onCancelEdit();
+  };
+
   return (
     <div>
       <h2>Portfolio Overview</h2>
@@ -101,6 +177,7 @@ export default function PortfolioPanel({
                   <td>{pos.product_type === "option" ? pos.maturity : "—"}</td>
                   <td>{spot.toFixed(2)}</td>
                   <td>
+                    <button onClick={() => onEditPosition(pos.id)}>Edit</button>
                     <button onClick={() => onDeletePosition(pos.id)}>Delete</button>
                   </td>
                 </tr>
@@ -112,7 +189,8 @@ export default function PortfolioPanel({
 
       <hr />
 
-      <h2>Add Position</h2>
+      <h3>{editingId ? "Edit Position" : "Add Position"}</h3>
+
       <div style={{ marginBottom: 10 }}>
         <label>
           <input
@@ -206,9 +284,22 @@ export default function PortfolioPanel({
         </>
       )}
 
-      <button onClick={handleAddPosition}>
+      <div style={{ marginTop: "10px" }}>
+        <button onClick={handleSubmit}>
+          {/* {editingId ? "Save Changes" : f"Add {addType === 'stock' ? 'Stock' : 'Option'}"} */}
+          {editingId ? "Save Changes" : "Add Position"}
+        </button>
+
+        {editingId && (
+          <button onClick={handleCancel} style={{ marginLeft: "10px" }}>
+            Cancel Edit
+          </button>
+        )}
+      </div>
+
+      {/* <button onClick={handleAddPosition}>
         Add {addType === "stock" ? "Stock" : "Option"}
-      </button>
+      </button> */}
     </div>
   );
 }

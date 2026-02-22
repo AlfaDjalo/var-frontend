@@ -15,6 +15,7 @@ function PortfolioPage() {
   const [localPositions, setLocalPositions] = useState(
     state.portfolio.positions
   );
+  const [editingId, setEditingId] = useState(null);
 
   useEffect(() => {
     setLocalPositions(state.portfolio.positions);
@@ -41,6 +42,23 @@ function PortfolioPage() {
       delete copy[id];
       return copy;
     });
+    
+    if (editingId === id) {
+      setEditingId(null);
+    }
+  };
+
+  const handleEditPosition = (id) => {
+    setEditingId(id);
+  };
+
+  const handleUpdatePosition = (id, updatedPosition) => {
+    setLocalPositions(prev => ({
+      ...prev,
+      [id]: updatedPosition
+    }));
+
+    setEditingId(null);
   };
 
   // ---------- Save / Cancel ----------
@@ -238,8 +256,12 @@ function PortfolioPage() {
         assets={assets}
         spotPrices={spotPrices}
         positions={positionsArray}
+        editingId={editingId}
         onAddPosition={handleAddPosition}
         onDeletePosition={handleDeletePosition}
+        onEditPosition={handleEditPosition}
+        onUpdatePosition={handleUpdatePosition}
+        onCancelEdit={() => setEditingId(null)}        
       />
 
       <div className="button-row">
